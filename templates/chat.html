@@ -8,8 +8,13 @@
 
 {% block content %}
 <div class="h-screen flex overflow-hidden">
+    <!-- Mobile Menu Button -->
+    <button id="mobileSidebarToggle" class="lg:hidden fixed top-4 left-4 z-50 btn-primary p-3 rounded-full shadow-lg">
+        <span id="menuIcon">☰</span>
+    </button>
+    
     <!-- Sidebar -->
-    <div id="sidebar" class="w-80 glass-strong border-r border-gray-700 flex flex-col transition-all duration-300">
+    <div id="sidebar" class="w-80 lg:w-80 glass-strong border-r border-gray-700 flex flex-col transition-all duration-300 fixed lg:relative h-full z-40 -translate-x-full lg:translate-x-0">
         <!-- Sidebar Header -->
         <div class="p-4 border-b border-gray-700">
             <div class="flex items-center justify-between mb-4">
@@ -50,34 +55,34 @@
     </div>
     
     <!-- Main Chat Area -->
-    <div class="flex-1 flex flex-col">
+    <div class="flex-1 flex flex-col w-full lg:w-auto">
         <!-- Chat Header -->
-        <div class="p-4 glass-strong border-b border-gray-700 flex items-center justify-between">
-            <div>
-                <h3 id="chatTitle" class="text-lg font-semibold">Chọn hoặc tạo cuộc trò chuyện</h3>
-                <p class="text-sm text-gray-400">AI Oracle với 78 lá Tarot</p>
+        <div class="p-3 lg:p-4 glass-strong border-b border-gray-700 flex items-center justify-between">
+            <div class="ml-12 lg:ml-0 flex-1">
+                <h3 id="chatTitle" class="text-base lg:text-lg font-semibold truncate">Chọn hoặc tạo cuộc trò chuyện</h3>
+                <p class="text-xs lg:text-sm text-gray-400">AI Oracle với 78 lá Tarot</p>
             </div>
-            <button id="deleteChatBtn" class="btn-secondary px-4 py-2 rounded-lg text-sm hidden">
-                🗑️ Xóa
+            <button id="deleteChatBtn" class="btn-secondary px-3 py-2 rounded-lg text-xs lg:text-sm hidden">
+                🗑️
             </button>
         </div>
         
         <!-- Messages Area -->
-        <div id="messagesArea" class="flex-1 overflow-y-auto p-6 space-y-4">
+        <div id="messagesArea" class="flex-1 overflow-y-auto p-3 lg:p-6 space-y-4 pb-safe">
             <!-- Welcome Message -->
-            <div id="welcomeMessage" class="text-center py-20">
-                <div class="inline-block glass-strong rounded-2xl p-8 max-w-md">
-                    <div class="text-6xl mb-4 animate-float">🔮</div>
-                    <h2 class="text-2xl font-bold orbitron neon-text-purple mb-2">Chào mừng đến Oracle</h2>
-                    <p class="text-gray-400 mb-6">Hỏi về tương lai, tình yêu, sự nghiệp hoặc bất cứ điều gì...</p>
+            <div id="welcomeMessage" class="text-center py-10 lg:py-20">
+                <div class="inline-block glass-strong rounded-2xl p-6 lg:p-8 max-w-md mx-4">
+                    <div class="text-5xl lg:text-6xl mb-4 animate-float">🔮</div>
+                    <h2 class="text-xl lg:text-2xl font-bold orbitron neon-text-purple mb-2">Chào mừng đến Oracle</h2>
+                    <p class="text-sm lg:text-base text-gray-400 mb-6">Hỏi về tương lai, tình yêu, sự nghiệp hoặc bất cứ điều gì...</p>
                     <div class="flex flex-wrap gap-2 justify-center">
-                        <button class="quick-prompt glass px-4 py-2 rounded-lg text-sm hover:neon-glow-cyan transition-all">
-                            💕 Tình yêu của tôi
+                        <button class="quick-prompt glass px-3 lg:px-4 py-2 rounded-lg text-xs lg:text-sm hover:neon-glow-cyan transition-all">
+                            💕 Tình yêu
                         </button>
-                        <button class="quick-prompt glass px-4 py-2 rounded-lg text-sm hover:neon-glow-purple transition-all">
+                        <button class="quick-prompt glass px-3 lg:px-4 py-2 rounded-lg text-xs lg:text-sm hover:neon-glow-purple transition-all">
                             💼 Sự nghiệp
                         </button>
-                        <button class="quick-prompt glass px-4 py-2 rounded-lg text-sm hover:neon-glow-pink transition-all">
+                        <button class="quick-prompt glass px-3 lg:px-4 py-2 rounded-lg text-xs lg:text-sm hover:neon-glow-pink transition-all">
                             🌟 Tương lai
                         </button>
                     </div>
@@ -86,22 +91,23 @@
         </div>
         
         <!-- Input Area -->
-        <div class="p-4 glass-strong border-t border-gray-700">
-            <form id="messageForm" class="flex gap-3">
+        <div class="p-3 lg:p-4 glass-strong border-t border-gray-700 pb-safe">
+            <form id="messageForm" class="flex gap-2 lg:gap-3">
                 <input 
                     type="text" 
                     id="messageInput" 
-                    placeholder="Hỏi Oracle về điều gì đó..."
-                    class="input-glass flex-1 px-4 py-3 rounded-lg"
+                    placeholder="Hỏi Oracle..."
+                    class="input-glass flex-1 px-3 lg:px-4 py-2 lg:py-3 rounded-lg text-sm lg:text-base"
                     disabled
                 >
                 <button 
                     type="submit" 
                     id="sendBtn"
-                    class="btn-primary px-6 py-3 rounded-lg font-semibold"
+                    class="btn-primary px-4 lg:px-6 py-2 lg:py-3 rounded-lg font-semibold text-sm lg:text-base"
                     disabled
                 >
-                    <span id="sendBtnText">Gửi</span>
+                    <span id="sendBtnText" class="hidden lg:inline">Gửi</span>
+                    <span id="sendBtnText" class="lg:hidden">📤</span>
                     <span id="sendBtnSpinner" class="hidden">
                         <div class="spinner inline-block"></div>
                     </span>
