@@ -5,6 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}Tarot AI Oracle Hub{% endblock %}</title>
     
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="/static/manifest.json">
+    <meta name="theme-color" content="#00ffff">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="apple-touch-icon" href="/static/avatar/default.png">
+    
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     
@@ -251,6 +258,19 @@
     
     <!-- Global Scripts -->
     <script>
+        // Register Service Worker for PWA
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/static/sw.js')
+                    .then((registration) => {
+                        console.log('✓ Service Worker registered:', registration);
+                    })
+                    .catch((error) => {
+                        console.log('✗ Service Worker registration failed:', error);
+                    });
+            });
+        }
+        
         // Toast notification system
         function showToast(message, type = 'info') {
             const container = document.getElementById('toast-container');
