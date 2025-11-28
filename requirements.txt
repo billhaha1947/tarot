@@ -1,8 +1,8 @@
 flask
 flask-socketio
 flask-sqlalchemy
+sqlalchemy
 pyjwt
 werkzeug
-eventlet
-sqlalchemy
 python-dotenv
+eventlet
