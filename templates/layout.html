@@ -1,20 +1,338 @@
 <!DOCTYPE html>
 <html lang="vi">
 <head>
-<meta charset="UTF-8">
-<link rel="manifest" href="/static/manifest.json">
-<script src="/static/js/app.js" defer></script>
-<script src="/static/js/socket.io.js"></script>
-<script src="/static/js/app.js"></script>
-<link href="https://cdn.tailwindcss.com" rel="stylesheet">
-<style>
- body{background:#0a0f1f;color:white;font-family:sans-serif}
- .glass{background:rgba(18,18,36,0.6);backdrop-filter:blur(12px);border:1px solid rgba(255,0,200,0.3)}
- .glow{box-shadow:0 0 15px #b026ff}
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Tarot AI Oracle Hub{% endblock %}</title>
+    
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Tailwind Config -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'neon-cyan': '#00ffff',
+                        'neon-purple': '#9d00ff',
+                        'neon-pink': '#ff00ff',
+                        'neon-gold': '#ffd700'
+                    },
+                    animation: {
+                        'glow': 'glow 2s ease-in-out infinite alternate',
+                        'float': 'float 3s ease-in-out infinite',
+                        'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                    },
+                    keyframes: {
+                        glow: {
+                            '0%': { boxShadow: '0 0 5px #00ffff, 0 0 10px #00ffff, 0 0 15px #00ffff' },
+                            '100%': { boxShadow: '0 0 10px #00ffff, 0 0 20px #00ffff, 0 0 30px #00ffff' }
+                        },
+                        float: {
+                            '0%, 100%': { transform: 'translateY(0px)' },
+                            '50%': { transform: 'translateY(-10px)' }
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <!-- Custom Styles -->
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@300;400;500;600;700&display=swap');
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Rajdhani', sans-serif;
+            background: #0a0a0f;
+            color: #e0e0e0;
+            overflow-x: hidden;
+        }
+        
+        .orbitron {
+            font-family: 'Orbitron', sans-serif;
+        }
+        
+        /* Starfield Background */
+        .starfield {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: 
+                radial-gradient(2px 2px at 20% 30%, white, transparent),
+                radial-gradient(2px 2px at 60% 70%, white, transparent),
+                radial-gradient(1px 1px at 50% 50%, white, transparent),
+                radial-gradient(1px 1px at 80% 10%, white, transparent),
+                radial-gradient(2px 2px at 90% 60%, white, transparent),
+                radial-gradient(1px 1px at 33% 33%, white, transparent),
+                radial-gradient(1px 1px at 66% 66%, white, transparent);
+            background-size: 200% 200%, 300% 300%, 250% 250%, 400% 400%, 350% 350%, 300% 300%, 250% 250%;
+            animation: twinkle 10s ease-in-out infinite;
+            pointer-events: none;
+            z-index: 0;
+        }
+        
+        @keyframes twinkle {
+            0%, 100% { opacity: 0.3; }
+            50% { opacity: 0.6; }
+        }
+        
+        /* Glass Effect */
+        .glass {
+            background: rgba(20, 20, 30, 0.7);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 8px 32px 0 rgba(0, 255, 255, 0.1);
+        }
+        
+        .glass-strong {
+            background: rgba(15, 15, 25, 0.85);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(0, 255, 255, 0.2);
+            box-shadow: 0 8px 32px 0 rgba(0, 255, 255, 0.2);
+        }
+        
+        /* Neon Glow */
+        .neon-glow-cyan {
+            box-shadow: 0 0 10px rgba(0, 255, 255, 0.5),
+                        0 0 20px rgba(0, 255, 255, 0.3),
+                        0 0 30px rgba(0, 255, 255, 0.1);
+        }
+        
+        .neon-glow-purple {
+            box-shadow: 0 0 10px rgba(157, 0, 255, 0.5),
+                        0 0 20px rgba(157, 0, 255, 0.3),
+                        0 0 30px rgba(157, 0, 255, 0.1);
+        }
+        
+        .neon-glow-pink {
+            box-shadow: 0 0 10px rgba(255, 0, 255, 0.5),
+                        0 0 20px rgba(255, 0, 255, 0.3),
+                        0 0 30px rgba(255, 0, 255, 0.1);
+        }
+        
+        .neon-text-cyan {
+            text-shadow: 0 0 10px rgba(0, 255, 255, 0.8),
+                        0 0 20px rgba(0, 255, 255, 0.6),
+                        0 0 30px rgba(0, 255, 255, 0.4);
+        }
+        
+        .neon-text-purple {
+            text-shadow: 0 0 10px rgba(157, 0, 255, 0.8),
+                        0 0 20px rgba(157, 0, 255, 0.6),
+                        0 0 30px rgba(157, 0, 255, 0.4);
+        }
+        
+        .neon-text-gold {
+            text-shadow: 0 0 10px rgba(255, 215, 0, 0.8),
+                        0 0 20px rgba(255, 215, 0, 0.6),
+                        0 0 30px rgba(255, 215, 0, 0.4);
+        }
+        
+        /* Button Styles */
+        .btn-primary {
+            background: linear-gradient(135deg, #00ffff 0%, #9d00ff 100%);
+            border: none;
+            color: white;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 0 20px rgba(0, 255, 255, 0.6),
+                        0 0 40px rgba(157, 0, 255, 0.4);
+        }
+        
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: white;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.2);
+            border-color: rgba(0, 255, 255, 0.4);
+        }
+        
+        /* Input Styles */
+        .input-glass {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: white;
+            transition: all 0.3s ease;
+        }
+        
+        .input-glass:focus {
+            outline: none;
+            background: rgba(255, 255, 255, 0.08);
+            border-color: #00ffff;
+            box-shadow: 0 0 15px rgba(0, 255, 255, 0.3);
+        }
+        
+        .input-glass::placeholder {
+            color: rgba(255, 255, 255, 0.4);
+        }
+        
+        /* Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        
+        ::-webkit-scrollbar-track {
+            background: rgba(20, 20, 30, 0.5);
+        }
+        
+        ::-webkit-scrollbar-thumb {
+            background: linear-gradient(180deg, #00ffff 0%, #9d00ff 100%);
+            border-radius: 4px;
+        }
+        
+        ::-webkit-scrollbar-thumb:hover {
+            background: linear-gradient(180deg, #00ffff 0%, #ff00ff 100%);
+        }
+        
+        /* Animations */
+        @keyframes slideInUp {
+            from {
+                transform: translateY(20px);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+        
+        .slide-in-up {
+            animation: slideInUp 0.5s ease-out;
+        }
+        
+        /* Loading Spinner */
+        .spinner {
+            border: 3px solid rgba(255, 255, 255, 0.1);
+            border-top: 3px solid #00ffff;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+    
+    {% block extra_head %}{% endblock %}
 </head>
-<body>
-<nav class="glass p-3 text-center text-xl font-bold mb-4">🔮 Tarot AI Oracle Hub</nav>
-{% block content %}{% endblock %}
+<body class="relative min-h-screen">
+    <!-- Starfield Background -->
+    <div class="starfield"></div>
+    
+    <!-- Main Content -->
+    <div class="relative z-10">
+        {% block content %}{% endblock %}
+    </div>
+    
+    <!-- Toast Container -->
+    <div id="toast-container" class="fixed top-4 right-4 z-50 space-y-2"></div>
+    
+    <!-- Global Scripts -->
+    <script>
+        // Toast notification system
+        function showToast(message, type = 'info') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            
+            const colors = {
+                success: 'bg-green-500/90',
+                error: 'bg-red-500/90',
+                info: 'bg-blue-500/90',
+                warning: 'bg-yellow-500/90'
+            };
+            
+            toast.className = `${colors[type]} text-white px-6 py-3 rounded-lg shadow-lg backdrop-blur-sm 
+                               transform transition-all duration-300 ease-in-out slide-in-up`;
+            toast.textContent = message;
+            
+            container.appendChild(toast);
+            
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                toast.style.transform = 'translateX(100%)';
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+        
+        // Local storage helpers
+        function setToken(token) {
+            localStorage.setItem('token', token);
+        }
+        
+        function getToken() {
+            return localStorage.getItem('token');
+        }
+        
+        function removeToken() {
+            localStorage.removeItem('token');
+        }
+        
+        function setUser(user) {
+            localStorage.setItem('user', JSON.stringify(user));
+        }
+        
+        function getUser() {
+            const user = localStorage.getItem('user');
+            return user ? JSON.parse(user) : null;
+        }
+        
+        function removeUser() {
+            localStorage.removeItem('user');
+        }
+        
+        // API request helper
+        async function apiRequest(url, options = {}) {
+            const token = getToken();
+            const headers = {
+                'Content-Type': 'application/json',
+                ...options.headers
+            };
+            
+            if (token) {
+                headers['Authorization'] = `Bearer ${token}`;
+            }
+            
+            try {
+                const response = await fetch(url, {
+                    ...options,
+                    headers
+                });
+                
+                const data = await response.json();
+                
+                if (!response.ok) {
+                    throw new Error(data.error || 'Request failed');
+                }
+                
+                return data;
+            } catch (error) {
+                throw error;
+            }
+        }
+    </script>
+    
+    {% block extra_scripts %}{% endblock %}
 </body>
 </html>
