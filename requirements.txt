@@ -1,0 +1,11 @@
+Flask==2.3.4
+Flask-SocketIO==6.4.2
+python-socketio==5.9.0
+python-engineio==4.4.0
+eventlet==0.33.3
+SQLAlchemy==2.1.0
+Flask_SQLAlchemy==3.0.3
+PyJWT==2.8.0
+Werkzeug==2.3.7
+passlib==1.7.4
+itsdangerous==2.1.2
