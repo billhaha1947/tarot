@@ -1,9 +1,23 @@
 {
-  "name":"Tarot AI Oracle Hub",
-  "short_name":"OracleHub",
-  "start_url":"/",
-  "display":"standalone",
-  "background_color":"#0a0f1f",
-  "theme_color":"#b026ff",
-  "icons":[{"src":"avatar/default.png","sizes":"512x512","type":"image/png"}]
+  "name": "Tarot AI Oracle Hub",
+  "short_name": "Tarot Oracle",
+  "description": "AI-Powered Mystical Insights with 78 Tarot Cards",
+  "start_url": "/chat",
+  "display": "standalone",
+  "background_color": "#0a0a0f",
+  "theme_color": "#00ffff",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/static/avatar/default.png",
+      "sizes": "200x200",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["lifestyle", "entertainment", "productivity"],
+  "lang": "vi-VN",
+  "dir": "ltr",
+  "scope": "/",
+  "prefer_related_applications": false
 }
