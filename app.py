@@ -1,151 +1,158 @@
-import os
-import datetime
-import json
-import random
-from flask import Flask, render_template, request, jsonify, redirect
-from flask_bcrypt import Bcrypt
-from flask_jwt_extended import JWTManager, create_access_token, jwt_required, get_jwt_identity
-from werkzeug.utils import secure_filename
-from flask_socketio import SocketIO
-
-from database import db
+from flask import Flask, request, jsonify, render_template, send_from_directory
+from flask_socketio import SocketIO, emit
+from database import db, User, Conversation, Message
 from model_manager import generate_reply, stream_generate_reply
-from pseudo_ai import TAROT_CARDS, draw_three, decode_symbols
+import jwt, os, random, json
+from werkzeug.utils import secure_filename
+from werkzeug.security import generate_password_hash, check_password_hash
 
 app = Flask(__name__)
-app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///oracle.db"
-app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
-app.config["JWT_SECRET_KEY"] = "LOCAL_DEPLOY_SECRET_KEY"
-app.config["UPLOAD_FOLDER"] = "static/avatar"
-app.secret_key = "LOCAL_FLASK_SECRET"
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///tarot_hub.db'
+app.config['SECRET_KEY'] = "LOCAL_SECRET_KEY"
 
-bcrypt = Bcrypt(app)
-jwt = JWTManager(app)
-socketio = SocketIO(app, cors_allowed_origins="*", async_mode="threading")
+db.init_app(app)
+socketio = SocketIO(app, cors_allowed_origins="*")
 
-class User(db.Model):
-    __tablename__ = "users"
-    id = db.Column(db.Integer, primary_key=True)
-    username = db.Column(db.String(64), unique=True, nullable=False)
-    password_hash = db.Column(db.String(256), nullable=False)
-    avatar = db.Column(db.String(256), default="default.png")
-    role = db.Column(db.String(32), default="user")
+JWT_SECRET = "LOCAL_JWT_SECRET"
+AVATAR_DIR = "static/avatar"
+os.makedirs(AVATAR_DIR, exist_ok=True)
 
-    def set_password(self, pw):
-        self.password_hash = bcrypt.generate_password_hash(pw).decode("utf8")
+@app.before_request
+def init_db():
+    if not os.path.exists("tarot_hub.db"):
+        with app.app_context():
+            db.create_all()
 
-    def check_password(self, pw):
-        return bcrypt.check_password_hash(self.password_hash, pw)
+def create_jwt(uid, role):
+    return jwt.encode({"uid": uid, "role": role}, JWT_SECRET, algorithm="HS256")
 
-class Conversation(db.Model):
-    __tablename__ = "conversations"
-    id = db.Column(db.Integer, primary_key=True)
-    user = db.Column(db.String(64))
-    title = db.Column(db.String(128))
-    created_at = db.Column(db.DateTime, default=datetime.datetime.utcnow)
+def decode_jwt(token):
+    try:
+        return jwt.decode(token, JWT_SECRET, algorithms=["HS256"])
+    except:
+        return None
 
-class Message(db.Model):
-    __tablename__ = "messages"
-    id = db.Column(db.Integer, primary_key=True)
-    convo_id = db.Column(db.Integer)
-    sender = db.Column(db.String(64))
-    text = db.Column(db.Text)
-    created_at = db.Column(db.DateTime, default=datetime.datetime.utcnow)
+# --- Auth API ---
+@app.route("/api/register", methods=["POST"])
+def register():
+    u = request.json["username"]
+    p = request.json["password"]
+    if User.query.filter_by(username=u).first():
+        return jsonify({"error":"Tài khoản đã tồn tại"})
+    user = User(username=u, password=generate_password_hash(p))
+    db.session.add(user); db.session.commit()
+    return jsonify({"msg":"Đăng ký thành công"})
 
-with app.app_context():
-    db.init_app(app)
-    db.create_all()
+@app.route("/api/login", methods=["POST"])
+def login():
+    u = request.json["username"]
+    p = request.json["password"]
+    user = User.query.filter_by(username=u).first()
+    if not user or not check_password_hash(user.password, p):
+        return jsonify({"error":"Sai thông tin đăng nhập"})
+    token = create_jwt(user.id, user.role)
+    return jsonify({"token": token})
 
+@app.route("/api/change_password", methods=["POST"])
+def change_password():
+    info = decode_jwt(request.headers.get("Authorization","").replace("Bearer ",""))
+    if not info: return jsonify({"error":"Unauthorized"})
+    user = User.query.get(info["uid"])
+    old = request.json["old"]; new = request.json["new"]
+    if not check_password_hash(user.password, old):
+        return jsonify({"error":"Mật khẩu cũ sai"})
+    user.password = generate_password_hash(new)
+    db.session.commit()
+    return jsonify({"msg":"Đổi mật khẩu thành công"})
+
+@app.route("/api/upload_avatar", methods=["POST"])
+def upload_avatar():
+    token = request.headers.get("Authorization","").replace("Bearer ","")
+    info = decode_jwt(token)
+    if not info: return jsonify({"error":"Unauthorized"})
+    file = request.files["avatar"]
+    fn = secure_filename(file.filename)
+    path = f"{AVATAR_DIR}/{info['uid']}_{fn}"
+    file.save(path)
+    user = User.query.get(info["uid"])
+    user.avatar = path; db.session.commit()
+    return jsonify({"avatar": path})
+
+# --- Web pages ---
 @app.route("/")
 def home():
-    return redirect("/chat")
+    return render_template("login.html")
 
-@app.route("/register", methods=["GET","POST"])
-def register():
-    if request.method == "POST":
-        u = request.form.get("username")
-        p = request.form.get("password")
-        r = request.form.get("role","user")
-        if not u or not p:
-            return "Thiếu thông tin", 400
-        if User.query.filter_by(username=u).first():
-            return "Đã tồn tại", 400
-        user = User(username=u, role=r)
-        user.set_password(p)
-        db.session.add(user)
+@app.route("/chat")
+def chat_page():
+    return render_template("chat.html")
+
+@app.route("/settings")
+def settings_page():
+    return render_template("settings.html")
+
+# --- SocketIO Chat streaming ---
+@socketio.on("send_prompt")
+def handle_prompt(data):
+    token = decode_jwt(data.get("jwt"))
+    if not token:
+        emit("reply_chunk", {"chunk":"\n❌ Bạn chưa đăng nhập!"})
+        return
+
+    uid = token["uid"]
+    convo = Conversation.query.filter_by(user_id=uid).order_by(Conversation.id.desc()).first()
+    if not convo:
+        convo = Conversation(user_id=uid, title="Chat mới")
+        db.session.add(convo); db.session.commit()
+
+    emit("typing", {"status":True})
+
+    prompt = data["prompt"]
+    # Lưu message user
+    db.session.add(Message(convo_id=convo.id, sender="user", text=prompt))
+    db.session.commit()
+
+    # Streaming AI
+    full = ""
+    for ch in stream_generate_reply(prompt, data.get("temperature",0.7), data.get("max_tokens",200)):
+        emit("reply_chunk", {"chunk":ch})
+        full += ch
+    emit("typing", {"status":False})
+
+    # Lưu AI message
+    db.session.add(Message(convo_id=convo.id, sender="ai", text=full))
+    db.session.commit()
+
+    # Auto-title nếu là chat đầu tiên
+    if convo.title == "Chat mới":
+        words = prompt.split()
+        convo.title = " ".join(words[:4]) + "…" if len(words)>=4 else prompt[:24]
         db.session.commit()
-        return redirect("/login")
-    return render_template("register.html", title="Đăng ký", avatar="default.png")
+        emit("convo_title", {"title":convo.title})
 
-@app.route("/login", methods=["GET","POST"])
-def login():
-    if request.method == "POST":
-        u = request.form.get("username")
-        p = request.form.get("password")
-        user = User.query.filter_by(username=u).first()
-        if not user or not user.check_password(p):
-            return "Sai đăng nhập", 401
-        access = create_access_token(identity=u, expires_delta=datetime.timedelta(days=30))
-        return jsonify({"token":access,"avatar":user.avatar})
-    return render_template("login.html", title="Đăng nhập", avatar="default.png")
+    # Oracle JSON bổ trợ
+    oracle = json.loads(generate_reply(prompt))
+    emit("oracle_json", oracle)
 
-@app.route("/change-password", methods=["POST"])
-@jwt_required(optional=True)
-def change_password():
-    u = get_jwt_identity()
-    user = User.query.filter_by(username=u).first()
-    old = request.json.get("old")
-    new = request.json.get("new")
-    if not user.check_password(old):
-        return "Sai mật khẩu", 400
-    user.set_password(new)
-    db.session.commit()
-    return jsonify({"msg":"ok"})
+# --- Lịch sử ---
+@app.route("/api/history")
+def history():
+    token = decode_jwt(request.headers.get("Authorization","").replace("Bearer ",""))
+    if not token: return jsonify([])
+    convos = Conversation.query.filter_by(user_id=token["uid"]).all()
+    res = {}
+    for c in convos:
+        msgs = Message.query.filter_by(convo_id=c.id).all()
+        res[c.id] = {
+            "title": c.title,
+            "messages": [{"sender":m.sender,"text":m.text} for m in msgs]
+        }
+    return jsonify(res)
 
-@app.route("/upload-avatar", methods=["POST"])
-@jwt_required(optional=True)
-def upload_avatar():
-    u = get_jwt_identity()
-    user = User.query.filter_by(username=u).first()
-    f = request.files.get("avatar")
-    fn = secure_filename(f.filename)
-    os.makedirs(app.config["UPLOAD_FOLDER"], exist_ok=True)
-    f.save(os.path.join(app.config["UPLOAD_FOLDER"], fn))
-    user.avatar = fn
-    db.session.commit()
-    return jsonify({"avatar":fn})
-
-@app.route("/api/reply", methods=["POST"])
-@jwt_required(optional=True)
-def api_reply():
-    prompt = request.json.get("prompt","")
-    temp = float(request.json.get("temperature",0.7))
-    mt = int(request.json.get("max_tokens",150))
-    r = generate_reply(prompt,temp,mt)
-    return jsonify({"reply":r})
-
-@socketio.on("generate_reply")
-def ws_ai(data):
-    prompt = data.get("prompt","")
-    temp = data.get("temperature",0.7)
-    mt = data.get("max_tokens",150)
-    socketio.emit("typing", {"status": True})
-    for t in stream_generate_reply(prompt,temp,mt):
-        socketio.emit("stream", {"token":t})
-    socketio.emit("typing", {"status": False})
-    oracle = {
-        "prediction": f"Thông điệp dành cho bạn từ {random.choice(TAROT_CARDS)}",
-        "tarot_card": random.choice(TAROT_CARDS),
-        "lucky_numbers": random.sample(range(1,50),4),
-        "luck_pct": random.randint(50,99),
-        "advice":"Giữ vững niềm tin.",
-        "emoji":"🔮",
-        "color":"Tím neon",
-        "three_draw": draw_three(),
-        "symbol_decode": decode_symbols(prompt)
-    }
-    socketio.emit("oracle_json", oracle)
+# --- Manifest, service-worker ---
+@app.route('/manifest.json')
+def manifest():
+    return send_from_directory(".", "manifest.json")
 
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 5000))
-    socketio.run(app, host="0.0.0.0", port=port, allow_unsafe_werkzeug=True)
+    socketio.run(app, host="0.0.0.0", port=10000)
