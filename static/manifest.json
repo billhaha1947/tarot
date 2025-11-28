@@ -1,0 +1,9 @@
+{
+  "name":"Tarot AI Oracle Hub",
+  "short_name":"OracleHub",
+  "start_url":"/",
+  "display":"standalone",
+  "background_color":"#0a0f1f",
+  "theme_color":"#b026ff",
+  "icons":[{"src":"avatar/default.png","sizes":"512x512","type":"image/png"}]
+}
