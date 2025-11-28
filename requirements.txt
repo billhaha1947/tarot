@@ -1,9 +1,8 @@
 Flask
-Flask-SocketIO
-flask-jwt-extended
-flask-bcrypt
 Flask-SQLAlchemy
-eventlet
-gpt4all
-PyJWT
+Flask-JWT-Extended
+Flask-Bcrypt
 Werkzeug
+GPT4All
+flask-socketio
+PyJWT
