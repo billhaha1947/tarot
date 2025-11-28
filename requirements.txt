@@ -1,8 +1,9 @@
-flask
-flask-socketio
-flask-sqlalchemy
-sqlalchemy
-pyjwt
-werkzeug
-python-dotenv
+Flask
+Flask-SocketIO
+flask-jwt-extended
+flask-bcrypt
+Flask-SQLAlchemy
 eventlet
+gpt4all
+PyJWT
+Werkzeug
