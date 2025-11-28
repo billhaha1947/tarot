@@ -1,16 +1,303 @@
 {% extends "layout.html" %}
+
+{% block title %}Cài đặt - Tarot AI Oracle{% endblock %}
+
 {% block content %}
-<div class="flex justify-center">
-<form method="POST" class="glass p-6 rounded-2xl w-96">
-<h2 class="text-3xl text-purple-400 glow mb-4 text-center">Cài đặt AI</h2>
-
-<label>Nhiệt độ (Temperature)</label>
-<input name="temperature" type="number" step="0.1" value="0.7" class="w-full mb-3 p-2 rounded bg-black border border-purple-500">
-
-<label>Số token tối đa</label>
-<input name="max_tokens" type="number" value="150" class="w-full mb-3 p-2 rounded bg-black border border-purple-500">
-
-<button class="w-full bg-purple-700 glow p-2 rounded-xl">Lưu</button>
-</form>
+<div class="min-h-screen p-4">
+    <div class="max-w-4xl mx-auto">
+        <!-- Header -->
+        <div class="mb-8">
+            <a href="/chat" class="inline-flex items-center gap-2 text-neon-cyan hover:text-neon-purple transition-colors mb-4">
+                ← Quay lại Chat
+            </a>
+            <h1 class="text-4xl font-bold orbitron neon-text-cyan">Cài đặt</h1>
+            <p class="text-gray-400 mt-2">Tùy chỉnh trải nghiệm Oracle của bạn</p>
+        </div>
+        
+        <div class="grid gap-6">
+            <!-- Profile Settings -->
+            <div class="glass-strong rounded-2xl p-6 slide-in-up">
+                <h2 class="text-2xl font-bold mb-6 neon-text-purple">👤 Hồ sơ cá nhân</h2>
+                
+                <div class="space-y-6">
+                    <!-- Avatar -->
+                    <div class="flex items-center gap-6">
+                        <img id="avatarPreview" src="/static/avatar/default.png" alt="Avatar" 
+                             class="w-24 h-24 rounded-full border-4 border-neon-cyan neon-glow-cyan">
+                        <div class="flex-1">
+                            <label class="block text-sm font-medium mb-2">Avatar</label>
+                            <input type="file" id="avatarInput" accept="image/*" 
+                                   class="hidden">
+                            <button id="uploadAvatarBtn" class="btn-primary px-6 py-2 rounded-lg">
+                                📤 Tải lên
+                            </button>
+                            <p class="text-xs text-gray-400 mt-2">PNG, JPG, GIF (Max 5MB)</p>
+                        </div>
+                    </div>
+                    
+                    <!-- User Info -->
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium mb-2">Tên đăng nhập</label>
+                            <input type="text" id="displayUsername" disabled
+                                   class="input-glass w-full px-4 py-2 rounded-lg opacity-50 cursor-not-allowed">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium mb-2">Email</label>
+                            <input type="email" id="displayEmail" disabled
+                                   class="input-glass w-full px-4 py-2 rounded-lg opacity-50 cursor-not-allowed">
+                        </div>
+                    </div>
+                    
+                    <!-- Change Password -->
+                    <div class="border-t border-gray-700 pt-6">
+                        <h3 class="text-lg font-semibold mb-4">Đổi mật khẩu</h3>
+                        <form id="changePasswordForm" class="space-y-4">
+                            <div>
+                                <label class="block text-sm font-medium mb-2">Mật khẩu cũ</label>
+                                <input type="password" id="oldPassword" 
+                                       class="input-glass w-full px-4 py-2 rounded-lg"
+                                       placeholder="Nhập mật khẩu cũ">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium mb-2">Mật khẩu mới</label>
+                                <input type="password" id="newPassword" 
+                                       class="input-glass w-full px-4 py-2 rounded-lg"
+                                       placeholder="Ít nhất 6 ký tự">
+                            </div>
+                            <button type="submit" class="btn-primary px-6 py-2 rounded-lg">
+                                🔒 Đổi mật khẩu
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- AI Settings -->
+            <div class="glass-strong rounded-2xl p-6 slide-in-up" style="animation-delay: 0.1s">
+                <h2 class="text-2xl font-bold mb-6 neon-text-cyan">🤖 Cài đặt AI</h2>
+                
+                <div class="space-y-6">
+                    <!-- Model Selection -->
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Mô hình AI</label>
+                        <select id="modelSelect" class="input-glass w-full px-4 py-2 rounded-lg">
+                            <option value="pseudo_tarot">Pseudo Tarot AI (Built-in)</option>
+                        </select>
+                        <p class="text-xs text-gray-400 mt-2">Chọn mô hình AI để sử dụng</p>
+                    </div>
+                    
+                    <!-- Temperature -->
+                    <div>
+                        <label class="block text-sm font-medium mb-2">
+                            Temperature: <span id="tempValue" class="text-neon-cyan">0.8</span>
+                        </label>
+                        <input type="range" id="temperatureSlider" 
+                               min="0" max="1" step="0.1" value="0.8"
+                               class="w-full">
+                        <div class="flex justify-between text-xs text-gray-400 mt-1">
+                            <span>Chính xác (0.0)</span>
+                            <span>Sáng tạo (1.0)</span>
+                        </div>
+                    </div>
+                    
+                    <!-- Max Tokens -->
+                    <div>
+                        <label class="block text-sm font-medium mb-2">
+                            Max Tokens: <span id="tokensValue" class="text-neon-cyan">500</span>
+                        </label>
+                        <input type="range" id="maxTokensSlider" 
+                               min="100" max="1000" step="50" value="500"
+                               class="w-full">
+                        <div class="flex justify-between text-xs text-gray-400 mt-1">
+                            <span>Ngắn (100)</span>
+                            <span>Dài (1000)</span>
+                        </div>
+                    </div>
+                    
+                    <button id="saveSettingsBtn" class="btn-primary px-6 py-2 rounded-lg">
+                        💾 Lưu cài đặt
+                    </button>
+                </div>
+            </div>
+            
+            <!-- About -->
+            <div class="glass-strong rounded-2xl p-6 slide-in-up" style="animation-delay: 0.2s">
+                <h2 class="text-2xl font-bold mb-4 neon-text-purple">ℹ️ Thông tin</h2>
+                <div class="space-y-2 text-gray-400">
+                    <p>🎴 <strong class="text-white">78 Lá Tarot</strong> - Major & Minor Arcana đầy đủ</p>
+                    <p>🤖 <strong class="text-white">AI Oracle</strong> - Dự đoán thông minh với streaming</p>
+                    <p>💬 <strong class="text-white">Real-time Chat</strong> - WebSocket streaming</p>
+                    <p>🔒 <strong class="text-white">100% Offline</strong> - Hoạt động hoàn toàn local</p>
+                    <p class="text-sm mt-4">Version 1.0.0 | Built with Flask, Socket.IO & TailwindCSS</p>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    // Check auth
+    if (!getToken()) {
+        window.location.href = '/';
+    }
+    
+    let currentSettings = {
+        model: 'pseudo_tarot',
+        temperature: 0.8,
+        max_tokens: 500
+    };
+    
+    // Load user data
+    async function loadUserData() {
+        try {
+            const user = await apiRequest('/api/user');
+            document.getElementById('displayUsername').value = user.username;
+            document.getElementById('displayEmail').value = user.email;
+            document.getElementById('avatarPreview').src = user.avatar;
+        } catch (error) {
+            showToast('Không thể tải thông tin người dùng', 'error');
+        }
+    }
+    
+    // Load AI settings
+    async function loadSettings() {
+        try {
+            const [models, settings] = await Promise.all([
+                apiRequest('/api/models'),
+                apiRequest('/api/settings')
+            ]);
+            
+            // Populate models
+            const modelSelect = document.getElementById('modelSelect');
+            modelSelect.innerHTML = models.map(m => 
+                `<option value="${m.id}">${m.name}</option>`
+            ).join('');
+            
+            // Set current values
+            modelSelect.value = settings.model;
+            document.getElementById('temperatureSlider').value = settings.temperature;
+            document.getElementById('maxTokensSlider').value = settings.max_tokens;
+            document.getElementById('tempValue').textContent = settings.temperature;
+            document.getElementById('tokensValue').textContent = settings.max_tokens;
+            
+            currentSettings = settings;
+        } catch (error) {
+            showToast('Không thể tải cài đặt', 'error');
+        }
+    }
+    
+    // Upload avatar
+    document.getElementById('uploadAvatarBtn').addEventListener('click', () => {
+        document.getElementById('avatarInput').click();
+    });
+    
+    document.getElementById('avatarInput').addEventListener('change', async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        
+        if (file.size > 5 * 1024 * 1024) {
+            showToast('File quá lớn (max 5MB)', 'error');
+            return;
+        }
+        
+        const formData = new FormData();
+        formData.append('avatar', file);
+        
+        try {
+            const response = await fetch('/api/user/avatar', {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${getToken()}`
+                },
+                body: formData
+            });
+            
+            const data = await response.json();
+            
+            if (!response.ok) {
+                throw new Error(data.error);
+            }
+            
+            document.getElementById('avatarPreview').src = data.avatar;
+            showToast('Tải avatar thành công!', 'success');
+            
+            // Update user in storage
+            const user = getUser();
+            user.avatar = data.avatar;
+            setUser(user);
+            
+        } catch (error) {
+            showToast(error.message || 'Tải avatar thất bại', 'error');
+        }
+    });
+    
+    // Change password
+    document.getElementById('changePasswordForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        
+        const oldPassword = document.getElementById('oldPassword').value;
+        const newPassword = document.getElementById('newPassword').value;
+        
+        if (!oldPassword || !newPassword) {
+            showToast('Vui lòng điền đầy đủ thông tin', 'warning');
+            return;
+        }
+        
+        if (newPassword.length < 6) {
+            showToast('Mật khẩu mới phải có ít nhất 6 ký tự', 'warning');
+            return;
+        }
+        
+        try {
+            await apiRequest('/api/user/password', {
+                method: 'PUT',
+                body: JSON.stringify({ old_password: oldPassword, new_password: newPassword })
+            });
+            
+            showToast('Đổi mật khẩu thành công!', 'success');
+            document.getElementById('changePasswordForm').reset();
+            
+        } catch (error) {
+            showToast(error.message || 'Đổi mật khẩu thất bại', 'error');
+        }
+    });
+    
+    // Update sliders
+    document.getElementById('temperatureSlider').addEventListener('input', (e) => {
+        document.getElementById('tempValue').textContent = e.target.value;
+    });
+    
+    document.getElementById('maxTokensSlider').addEventListener('input', (e) => {
+        document.getElementById('tokensValue').textContent = e.target.value;
+    });
+    
+    // Save settings
+    document.getElementById('saveSettingsBtn').addEventListener('click', async () => {
+        const settings = {
+            model: document.getElementById('modelSelect').value,
+            temperature: parseFloat(document.getElementById('temperatureSlider').value),
+            max_tokens: parseInt(document.getElementById('maxTokensSlider').value)
+        };
+        
+        try {
+            await apiRequest('/api/settings', {
+                method: 'PUT',
+                body: JSON.stringify(settings)
+            });
+            
+            showToast('Lưu cài đặt thành công!', 'success');
+            currentSettings = settings;
+            
+        } catch (error) {
+            showToast(error.message || 'Lưu cài đặt thất bại', 'error');
+        }
+    });
+    
+    // Initialize
+    loadUserData();
+    loadSettings();
+</script>
 {% endblock %}
