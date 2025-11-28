@@ -91,7 +91,7 @@ def jwt_decode_token(auth_header: str):
 # --- Routes (UI) ---
 @app.route("/")
 def home():
-    return render_template("chat.html")
+    return render_template("layout.html")
 
 @app.route("/health")
 def health():
