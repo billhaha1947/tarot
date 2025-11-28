@@ -1,10 +1,40 @@
 <!DOCTYPE html>
 <html lang="vi">
 <head>
-<script src="/static/js/app.js"></script>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>🔮 Tarot AI Oracle Hub</title>
 <script src="https://cdn.tailwindcss.com"></script>
+<style>
+  body {
+    background:#0a0f16;
+    font-family:system-ui, sans-serif;
+  }
+  .glass {
+    background: rgba(16, 25, 40, 0.6);
+    backdrop-filter: blur(12px);
+    border:1px solid rgba(80, 120, 255, 0.15);
+    box-shadow:0 0 25px rgba(80,120,255,0.25);
+  }
+  .neon {
+    text-shadow:0 0 10px #4c8bff,0 0 20px #1e60ff;
+  }
+</style>
 </head>
-<body class="bg-black text-white">
-{% block content %}{% endblock %}
+<body class="text-gray-100">
+
+<nav class="glass fixed top-0 w-full px-5 py-3 flex justify-between items-center">
+  <h1 class="text-xl font-bold neon text-blue-400">Tarot AI Oracle Hub</h1>
+  <div class="flex gap-4">
+    <a href="/chat" class="hover:text-blue-400 transition">Chat</a>
+    <a href="/settings" class="hover:text-purple-400 transition">Cài đặt</a>
+    <a href="/login" class="hover:text-red-400 transition">Đăng nhập</a>
+  </div>
+</nav>
+
+<main class="pt-20 px-4">
+  {% block content %}{% endblock %}
+</main>
+
 </body>
 </html>
