@@ -1,4 +1,11 @@
 {% extends "layout.html" %}
 {% block content %}
-<h1>Login</h1>
+<div class="flex justify-center">
+<form method="POST" class="glass p-6 rounded-2xl w-80">
+<h2 class="text-2xl text-purple-400 glow mb-4 text-center">Đăng nhập</h2>
+<input name="username" placeholder="Username" class="w-full mb-3 p-2 rounded bg-black border border-purple-500">
+<input name="password" type="password" placeholder="Password" class="w-full mb-3 p-2 rounded bg-black border border-purple-500">
+<button class="w-full p-2 rounded bg-purple-700 glow">Login</button>
+</form>
+</div>
 {% endblock %}
