@@ -1,11 +1,138 @@
 {% extends "layout.html" %}
+
+{% block title %}Đăng nhập - Tarot AI Oracle{% endblock %}
+
 {% block content %}
-<div class="flex justify-center">
-<form method="POST" class="glass p-6 rounded-2xl w-80">
-<h2 class="text-2xl text-purple-400 glow mb-4 text-center">Đăng nhập</h2>
-<input name="username" placeholder="Username" class="w-full mb-3 p-2 rounded bg-black border border-purple-500">
-<input name="password" type="password" placeholder="Password" class="w-full mb-3 p-2 rounded bg-black border border-purple-500">
-<button class="w-full p-2 rounded bg-purple-700 glow">Login</button>
-</form>
+<div class="min-h-screen flex items-center justify-center p-4">
+    <div class="w-full max-w-md">
+        <!-- Logo -->
+        <div class="text-center mb-8 slide-in-up">
+            <div class="inline-block">
+                <h1 class="text-5xl font-bold orbitron neon-text-cyan mb-2">🔮</h1>
+                <h2 class="text-3xl font-bold orbitron neon-text-purple">TAROT ORACLE</h2>
+                <p class="text-sm text-gray-400 mt-2">AI-Powered Mystical Insights</p>
+            </div>
+        </div>
+        
+        <!-- Login Form -->
+        <div class="glass-strong rounded-2xl p-8 shadow-2xl slide-in-up" style="animation-delay: 0.1s">
+            <h3 class="text-2xl font-bold text-center mb-6 neon-text-cyan">Đăng nhập</h3>
+            
+            <form id="loginForm" class="space-y-5">
+                <div>
+                    <label class="block text-sm font-medium mb-2 text-gray-300">Tên đăng nhập</label>
+                    <input 
+                        type="text" 
+                        id="username" 
+                        name="username" 
+                        required
+                        class="input-glass w-full px-4 py-3 rounded-lg"
+                        placeholder="Nhập tên đăng nhập"
+                    >
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium mb-2 text-gray-300">Mật khẩu</label>
+                    <input 
+                        type="password" 
+                        id="password" 
+                        name="password" 
+                        required
+                        class="input-glass w-full px-4 py-3 rounded-lg"
+                        placeholder="Nhập mật khẩu"
+                    >
+                </div>
+                
+                <button 
+                    type="submit" 
+                    class="btn-primary w-full py-3 rounded-lg font-semibold text-lg"
+                    id="loginBtn"
+                >
+                    <span id="loginBtnText">Đăng nhập</span>
+                    <span id="loginBtnSpinner" class="hidden">
+                        <div class="spinner inline-block"></div>
+                    </span>
+                </button>
+            </form>
+            
+            <div class="mt-6 text-center">
+                <p class="text-gray-400">
+                    Chưa có tài khoản? 
+                    <a href="/register" class="text-neon-cyan hover:text-neon-purple transition-colors font-semibold">
+                        Đăng ký ngay
+                    </a>
+                </p>
+            </div>
+        </div>
+        
+        <!-- Features -->
+        <div class="mt-8 grid grid-cols-3 gap-4">
+            <div class="glass text-center p-4 rounded-xl hover:neon-glow-cyan transition-all cursor-pointer">
+                <div class="text-3xl mb-2">🎴</div>
+                <p class="text-xs text-gray-300">78 Lá Tarot</p>
+            </div>
+            <div class="glass text-center p-4 rounded-xl hover:neon-glow-purple transition-all cursor-pointer">
+                <div class="text-3xl mb-2">🤖</div>
+                <p class="text-xs text-gray-300">AI Oracle</p>
+            </div>
+            <div class="glass text-center p-4 rounded-xl hover:neon-glow-pink transition-all cursor-pointer">
+                <div class="text-3xl mb-2">💬</div>
+                <p class="text-xs text-gray-300">Real-time Chat</p>
+            </div>
+        </div>
+    </div>
 </div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    // Check if already logged in
+    if (getToken()) {
+        window.location.href = '/chat';
+    }
+    
+    const loginForm = document.getElementById('loginForm');
+    const loginBtn = document.getElementById('loginBtn');
+    const loginBtnText = document.getElementById('loginBtnText');
+    const loginBtnSpinner = document.getElementById('loginBtnSpinner');
+    
+    loginForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        
+        const username = document.getElementById('username').value.trim();
+        const password = document.getElementById('password').value;
+        
+        if (!username || !password) {
+            showToast('Vui lòng điền đầy đủ thông tin', 'warning');
+            return;
+        }
+        
+        // Show loading
+        loginBtn.disabled = true;
+        loginBtnText.classList.add('hidden');
+        loginBtnSpinner.classList.remove('hidden');
+        
+        try {
+            const data = await apiRequest('/api/login', {
+                method: 'POST',
+                body: JSON.stringify({ username, password })
+            });
+            
+            setToken(data.token);
+            setUser(data.user);
+            
+            showToast('Đăng nhập thành công!', 'success');
+            
+            setTimeout(() => {
+                window.location.href = '/chat';
+            }, 500);
+            
+        } catch (error) {
+            showToast(error.message || 'Đăng nhập thất bại', 'error');
+            loginBtn.disabled = false;
+            loginBtnText.classList.remove('hidden');
+            loginBtnSpinner.classList.add('hidden');
+        }
+    });
+</script>
 {% endblock %}
