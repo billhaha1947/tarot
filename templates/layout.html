@@ -1,19 +1,20 @@
-<!DOCTYPE html><html lang="vi"><head>
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>{{title}}</title>
-<link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<link rel="manifest" href="/static/manifest.json">
+<script src="/static/js/app.js" defer></script>
+<script src="/static/js/socket.io.js"></script>
 <script src="/static/js/app.js"></script>
+<link href="https://cdn.tailwindcss.com" rel="stylesheet">
 <style>
-body{background:#0a0f1f;color:white;font-family:Inter,sans-serif}
-.glass{backdrop-filter:blur(12px);background:rgba(15,15,40,0.45);border:1px solid rgba(138,43,226,0.3)}
-.bubble{padding:12px;border-radius:16px;margin:8px 0;max-width:75%;animation:.25s ease-out}
-.user{background:linear-gradient(90deg,#00f2ff,#0055ff);margin-left:auto;color:black;font-weight:500}
-.ai{background:linear-gradient(90deg,#8a2be2,#ff00d4)}
-.neon-glow{box-shadow:0 0 10px #ff00d4,0 0 5px #8a2be2}
-</style></head><body>
-<nav class="glass neon-glow p-3 flex justify-between">
-  <span>🔮 Tarot AI</span>
-  <img src="/static/avatar/{{avatar}}" class="w-8 h-8 rounded-full">
-</nav>
-<div class="p-4">{% block content %}{% endblock %}</div>
-</body></html>
+ body{background:#0a0f1f;color:white;font-family:sans-serif}
+ .glass{background:rgba(18,18,36,0.6);backdrop-filter:blur(12px);border:1px solid rgba(255,0,200,0.3)}
+ .glow{box-shadow:0 0 15px #b026ff}
+</style>
+</head>
+<body>
+<nav class="glass p-3 text-center text-xl font-bold mb-4">🔮 Tarot AI Oracle Hub</nav>
+{% block content %}{% endblock %}
+</body>
+</html>
