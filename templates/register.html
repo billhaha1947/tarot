@@ -1,11 +1,178 @@
 {% extends "layout.html" %}
+
+{% block title %}Đăng ký - Tarot AI Oracle{% endblock %}
+
 {% block content %}
-<div class="flex justify-center">
-<form method="POST" class="glass p-6 rounded-2xl w-80">
-<h2 class="text-2xl text-green-400 glow mb-4 text-center">Đăng ký</h2>
-<input name="username" placeholder="Username" class="w-full mb-3 p-2 rounded bg-black border border-green-500">
-<input name="password" type="password" placeholder="Password" class="w-full mb-3 p-2 rounded bg-black border border-green-500">
-<button class="w-full p-2 rounded bg-green-700 glow">Register</button>
-</form>
+<div class="min-h-screen flex items-center justify-center p-4">
+    <div class="w-full max-w-md">
+        <!-- Logo -->
+        <div class="text-center mb-8 slide-in-up">
+            <div class="inline-block">
+                <h1 class="text-5xl font-bold orbitron neon-text-purple mb-2">✨</h1>
+                <h2 class="text-3xl font-bold orbitron neon-text-cyan">TAROT ORACLE</h2>
+                <p class="text-sm text-gray-400 mt-2">Bắt đầu hành trình khám phá</p>
+            </div>
+        </div>
+        
+        <!-- Register Form -->
+        <div class="glass-strong rounded-2xl p-8 shadow-2xl slide-in-up" style="animation-delay: 0.1s">
+            <h3 class="text-2xl font-bold text-center mb-6 neon-text-purple">Đăng ký tài khoản</h3>
+            
+            <form id="registerForm" class="space-y-5">
+                <div>
+                    <label class="block text-sm font-medium mb-2 text-gray-300">Tên đăng nhập</label>
+                    <input 
+                        type="text" 
+                        id="username" 
+                        name="username" 
+                        required
+                        minlength="3"
+                        class="input-glass w-full px-4 py-3 rounded-lg"
+                        placeholder="Ít nhất 3 ký tự"
+                    >
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium mb-2 text-gray-300">Email</label>
+                    <input 
+                        type="email" 
+                        id="email" 
+                        name="email" 
+                        required
+                        class="input-glass w-full px-4 py-3 rounded-lg"
+                        placeholder="email@example.com"
+                    >
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium mb-2 text-gray-300">Mật khẩu</label>
+                    <input 
+                        type="password" 
+                        id="password" 
+                        name="password" 
+                        required
+                        minlength="6"
+                        class="input-glass w-full px-4 py-3 rounded-lg"
+                        placeholder="Ít nhất 6 ký tự"
+                    >
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium mb-2 text-gray-300">Xác nhận mật khẩu</label>
+                    <input 
+                        type="password" 
+                        id="confirmPassword" 
+                        name="confirmPassword" 
+                        required
+                        class="input-glass w-full px-4 py-3 rounded-lg"
+                        placeholder="Nhập lại mật khẩu"
+                    >
+                </div>
+                
+                <button 
+                    type="submit" 
+                    class="btn-primary w-full py-3 rounded-lg font-semibold text-lg"
+                    id="registerBtn"
+                >
+                    <span id="registerBtnText">Đăng ký</span>
+                    <span id="registerBtnSpinner" class="hidden">
+                        <div class="spinner inline-block"></div>
+                    </span>
+                </button>
+            </form>
+            
+            <div class="mt-6 text-center">
+                <p class="text-gray-400">
+                    Đã có tài khoản? 
+                    <a href="/" class="text-neon-purple hover:text-neon-cyan transition-colors font-semibold">
+                        Đăng nhập ngay
+                    </a>
+                </p>
+            </div>
+        </div>
+        
+        <!-- Trust Indicators -->
+        <div class="mt-8 text-center space-y-2">
+            <div class="flex items-center justify-center gap-2 text-sm text-gray-400">
+                <span>🔒</span>
+                <span>100% Offline & Private</span>
+            </div>
+            <div class="flex items-center justify-center gap-2 text-sm text-gray-400">
+                <span>⚡</span>
+                <span>Instant AI Response</span>
+            </div>
+        </div>
+    </div>
 </div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    // Check if already logged in
+    if (getToken()) {
+        window.location.href = '/chat';
+    }
+    
+    const registerForm = document.getElementById('registerForm');
+    const registerBtn = document.getElementById('registerBtn');
+    const registerBtnText = document.getElementById('registerBtnText');
+    const registerBtnSpinner = document.getElementById('registerBtnSpinner');
+    
+    registerForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        
+        const username = document.getElementById('username').value.trim();
+        const email = document.getElementById('email').value.trim();
+        const password = document.getElementById('password').value;
+        const confirmPassword = document.getElementById('confirmPassword').value;
+        
+        // Validation
+        if (!username || !email || !password || !confirmPassword) {
+            showToast('Vui lòng điền đầy đủ thông tin', 'warning');
+            return;
+        }
+        
+        if (username.length < 3) {
+            showToast('Tên đăng nhập phải có ít nhất 3 ký tự', 'warning');
+            return;
+        }
+        
+        if (password.length < 6) {
+            showToast('Mật khẩu phải có ít nhất 6 ký tự', 'warning');
+            return;
+        }
+        
+        if (password !== confirmPassword) {
+            showToast('Mật khẩu xác nhận không khớp', 'warning');
+            return;
+        }
+        
+        // Show loading
+        registerBtn.disabled = true;
+        registerBtnText.classList.add('hidden');
+        registerBtnSpinner.classList.remove('hidden');
+        
+        try {
+            const data = await apiRequest('/api/register', {
+                method: 'POST',
+                body: JSON.stringify({ username, email, password })
+            });
+            
+            setToken(data.token);
+            setUser(data.user);
+            
+            showToast('Đăng ký thành công!', 'success');
+            
+            setTimeout(() => {
+                window.location.href = '/chat';
+            }, 500);
+            
+        } catch (error) {
+            showToast(error.message || 'Đăng ký thất bại', 'error');
+            registerBtn.disabled = false;
+            registerBtnText.classList.remove('hidden');
+            registerBtnSpinner.classList.add('hidden');
+        }
+    });
+</script>
 {% endblock %}
