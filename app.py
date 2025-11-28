@@ -1,300 +1,137 @@
-# app.py (production-ready for Render + Socket.IO)
-import os
-import datetime
-import eventlet
-eventlet.monkey_patch()  # bắt buộc cho eventlet + socketio
-
-import jwt
-from dotenv import load_dotenv
-from flask import Flask, render_template, request, jsonify, send_from_directory
-from flask_socketio import SocketIO, emit
-from werkzeug.utils import secure_filename
-from werkzeug.security import generate_password_hash, check_password_hash
-
-# load env
-load_dotenv()
-
-# local imports (database, model manager)
-from database import init_db, db
+import os, jwt, datetime, random
+from flask import Flask, render_template, request, jsonify, redirect
+from flask_bcrypt import Bcrypt
+from flask_socketio import SocketIO
+from sqlalchemy import Column, Integer, String, Text, DateTime
+from database import db
 from model_manager import generate_reply, stream_generate_reply
+from pseudo_ai import TAROT_CARDS, draw_three, decode_symbols
+from werkzeug.utils import secure_filename
 
-# Config
-UPLOAD_FOLDER = os.getenv("UPLOAD_FOLDER", "static/avatar")
-ALLOWED_EXT = {"png", "jpg", "jpeg", "gif"}
-JWT_SECRET = os.getenv("TAROT_JWT_SECRET", "LOCAL_JWT_SECRET")
-SECRET_KEY = os.getenv("TAROT_SECRET", "LOCAL_SECRET_TAROT")
+app = Flask(__name__)
+app.secret_key="local_render_dev"
+app.config['SQLALCHEMY_DATABASE_URI']="sqlite:///oracle.db"
+app.config['UPLOAD_FOLDER']="static/avatar"
+bcrypt=Bcrypt(app)
+db.init_app(app)
+socketio=SocketIO(app, cors_allowed_origins="*", async_mode="eventlet")
+JWT_SECRET="tarot_local_secret"
 
-# Ensure upload folder exists
-os.makedirs(UPLOAD_FOLDER, exist_ok=True)
-
-app = Flask(__name__, static_folder="static", template_folder="templates")
-app.config["SECRET_KEY"] = SECRET_KEY
-app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
-app.config["MAX_CONTENT_LENGTH"] = 4 * 1024 * 1024
-
-# Initialize DB (will create tables)
-init_db(app)
-
-# SocketIO with eventlet async mode
-socketio = SocketIO(app, cors_allowed_origins="*", async_mode="eventlet")
-
-# --- Models (using SQLAlchemy instance from database.py) ---
+# Models DB
 class User(db.Model):
-    __tablename__ = "users"
-    id = db.Column(db.Integer, primary_key=True)
-    username = db.Column(db.String(64), unique=True, nullable=False)
-    password_hash = db.Column(db.String(256), nullable=False)
-    avatar = db.Column(db.String(256), default="/static/avatar/default.png")
-    role = db.Column(db.String(32), default="user")
-    created_at = db.Column(db.DateTime, default=datetime.datetime.utcnow)
+    __tablename__="users"
+    id=Column(Integer,primary_key=True)
+    username=Column(String(64),unique=True)
+    password_hash=Column(String(128))
+    avatar=Column(String(256),default="default.png")
+    role=Column(String(32), default="user")
+    def set_password(self,pw): self.password_hash=bcrypt.generate_password_hash(pw).decode('utf8')
+    def check_password(self,pw): return bcrypt.check_password_hash(self.password_hash,pw)
 
 class Conversation(db.Model):
-    __tablename__ = "conversations"
-    id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, nullable=False)
-    title = db.Column(db.String(256), default="Trò chuyện mới")
-    created = db.Column(db.DateTime, default=datetime.datetime.utcnow)
-    updated = db.Column(db.DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow)
+    __tablename__="conversations"
+    id=Column(Integer,primary_key=True)
+    user=Column(String(64))
+    title=Column(String(120))
+    created_at=Column(DateTime, default=datetime.datetime.utcnow)
 
 class Message(db.Model):
-    __tablename__ = "messages"
-    id = db.Column(db.Integer, primary_key=True)
-    conv_id = db.Column(db.Integer, nullable=False)
-    sender = db.Column(db.String(16))  # 'user' or 'ai'
-    content = db.Column(db.Text)
-    created = db.Column(db.DateTime, default=datetime.datetime.utcnow)
+    __tablename__="messages"
+    id=Column(Integer,primary_key=True)
+    convo_id=Column(Integer)
+    sender=Column(String(16))
+    text=Column(Text)
+    created_at=Column(DateTime, default=datetime.datetime.utcnow)
 
-# --- Auth helpers ---
-def jwt_encode(data: dict):
-    payload = data.copy()
-    payload["iat"] = datetime.datetime.utcnow()
-    return jwt.encode(payload, JWT_SECRET, algorithm="HS256")
+with app.app_context(): db.create_all()
 
-def jwt_decode_token(auth_header: str):
-    """
-    Accepts Authorization header value. Supports:
-    - "Bearer <token>"
-    - raw token
-    Returns decoded payload or None.
-    """
-    if not auth_header:
-        return None
-    token = auth_header
-    parts = token.split()
-    if len(parts) == 2 and parts[0].lower() == "bearer":
-        token = parts[1]
+# JWT helpers
+def create_token(user):
+    return jwt.encode({"username":user.username,
+                       "role":user.role,
+                       "exp":datetime.datetime.utcnow()+datetime.timedelta(days=7)},
+                       JWT_SECRET,"HS256")
+
+def current_user():
+    t=request.cookies.get("access_token","")
     try:
-        return jwt.decode(token, JWT_SECRET, algorithms=["HS256"])
-    except Exception:
-        return None
+        d=jwt.decode(t,JWT_SECRET,algorithms=["HS256"])
+        return User.query.filter_by(username=d['username']).first()
+    except: return None
 
-# --- Routes (UI) ---
-@app.route("/")
-def home():
-    return render_template("layout.html")
-
-@app.route("/health")
-def health():
-    return jsonify({"ok": True, "ts": datetime.datetime.utcnow().isoformat()})
-
-# --- API: auth & user ---
-@app.post("/api/register")
+# ROUTES
+@app.route("/register",methods=['GET','POST'])
 def register():
-    data = request.json or {}
-    username = (data.get("username") or "").strip()
-    password = data.get("password") or ""
-    if not username or not password:
-        return jsonify({"error": "Thiếu dữ liệu"}), 400
-    if User.query.filter_by(username=username).first():
-        return jsonify({"error": "User tồn tại"}), 400
-    u = User(username=username, password_hash=generate_password_hash(password))
-    db.session.add(u)
-    db.session.commit()
-    token = jwt_encode({"uid": u.id, "username": u.username, "role": u.role})
-    return jsonify({"status": "ok", "token": token})
+    if request.method=="POST":
+        u=request.form['username']; p=request.form['password']
+        if User.query.filter_by(username=u).first(): return "Tồn tại ❌"
+        user=User(username=u); user.set_password(p)
+        db.session.add(user); db.session.commit()
+        return redirect("/login")
+    return render_template("register.html",title="Đăng ký",avatar="default.png",content="")
 
-@app.post("/api/login")
+@app.route("/login",methods=['GET','POST'])
 def login():
-    data = request.json or {}
-    username = data.get("username") or ""
-    password = data.get("password") or ""
-    u = User.query.filter_by(username=username).first()
-    if not u or not check_password_hash(u.password_hash, password):
-        return jsonify({"error": "Sai tài khoản"}), 401
-    token = jwt_encode({"uid": u.id, "username": u.username, "avatar": u.avatar, "role": u.role})
-    return jsonify({"token": token})
+    if request.method=="POST":
+        u=request.form['username']; p=request.form['password']
+        user=User.query.filter_by(username=u).first()
+        if user and user.check_password(p):
+            res=redirect("/chat")
+            res.set_cookie("access_token", create_token(user))
+            return res
+        return "Sai ❌"
+    return render_template("login.html",title="Đăng nhập",avatar="default.png",content="")
 
-@app.post("/api/avatar")
-def upload_avatar():
-    auth = request.headers.get("Authorization", "")
-    info = jwt_decode_token(auth)
-    if not info:
-        return jsonify({"error": "Unauthorized"}), 401
-    if "file" not in request.files:
-        return jsonify({"error": "No file"}), 400
-    f = request.files["file"]
-    filename = secure_filename(f.filename)
-    if "." in filename:
-        ext = filename.rsplit(".", 1)[1].lower()
-    else:
-        ext = ""
-    if ext not in ALLOWED_EXT:
-        return jsonify({"error": "Invalid file type"}), 400
-    save_name = f"user_{info['uid']}.{ext}"
-    save_path = os.path.join(app.config["UPLOAD_FOLDER"], save_name)
-    f.save(save_path)
-    u = User.query.get(int(info["uid"]))
-    if u:
-        u.avatar = f"/static/avatar/{save_name}"
-        db.session.commit()
-        return jsonify({"avatar": u.avatar})
-    return jsonify({"error": "User not found"}), 404
+@app.route("/logout")
+def logout():
+    r=redirect("/login"); r.delete_cookie("access_token"); return r
 
-# --- Conversations & messages ---
-@app.get("/api/conversations")
-def list_conv():
-    auth = request.headers.get("Authorization", "")
-    info = jwt_decode_token(auth)
-    if not info:
-        return jsonify({"error": "unauthorized"}), 401
-    convs = Conversation.query.filter_by(user_id=int(info["uid"])).order_by(Conversation.updated.desc()).all()
-    items = [{"id": c.id, "title": c.title, "updated": c.updated.isoformat()} for c in convs]
-    return jsonify({"items": items})
+@app.route("/chat")
+def chat():
+    user=current_user()
+    if not user: return redirect("/login")
+    return render_template("chat.html",title="Oracle Hub",avatar=user.avatar,username=user.username)
 
-@app.post("/api/newchat")
-def new_chat():
-    auth = request.headers.get("Authorization", "")
-    info = jwt_decode_token(auth)
-    if not info:
-        return jsonify({"error": "unauthorized"}), 401
-    t = datetime.datetime.utcnow().strftime("%H:%M %d/%m/%Y")
-    c = Conversation(user_id=int(info["uid"]), title=f"Chat {t}")
-    db.session.add(c)
+@app.route("/settings")
+def settings():
+    return render_template("settings.html",title="Cài đặt",avatar="default.png",content="")
+
+@app.route("/avatar",methods=['POST'])
+def avatar():
+    user=current_user()
+    if not user: return jsonify({"error":"unauthorized"}),401
+    f=request.files['avatar']; fn=secure_filename(f.filename)
+    f.save(os.path.join(app.config['UPLOAD_FOLDER'],fn))
+    user.avatar=fn; db.session.commit()
+    return jsonify({"avatar":fn})
+
+# SOCKET STREAM
+@socketio.on("prompt")
+def on_prompt(msg):
+    user=current_user()
+    if not user: return socketio.emit("stream","")
+    text=msg['text']
+    socketio.emit("typing")
+    buf=""
+    for token in stream_generate_reply(text,0.7,160):
+        buf+=token
+        socketio.emit("stream", token)
+    # JSON oracle
+    card=random.choice(TAROT_CARDS)
+    oracle={
+        "prediction":"Tín hiệu chiêm tinh đang mở…",
+        "tarot_card":card,
+        "lucky_numbers":random.sample(range(1,49),4),
+        "luck_pct":random.randint(50,100),
+        "advice":random.choice(["Tin trực giác","Điềm tĩnh","Hành động đúng lúc"]),
+        "emoji":random.choice(["🔮","✨","🌙","💎"]),
+        "color":random.choice(["#ff00d4","#00f2ff","#39ff14","#ffd700"]),
+        "symbols": decode_symbols(text),
+        "three": draw_three()
+    }
+    socketio.emit("oracle_json",oracle)
+    # save convo
+    c=Conversation(user=user.username,title="Chat "+str(random.randint(100,999)))
+    db.session.add(c); db.session.commit()
+    db.session.add(Message(convo_id=c.id,sender="user",text=text))
     db.session.commit()
-    return jsonify({"id": c.id, "title": c.title})
-
-@app.get("/api/history/<cid>")
-def history(cid):
-    auth = request.headers.get("Authorization", "")
-    info = jwt_decode_token(auth)
-    if not info:
-        return jsonify({"error": "unauthorized"}), 401
-    msgs = Message.query.filter_by(conv_id=int(cid)).order_by(Message.created.asc()).all()
-    items = [{"s": m.sender, "c": m.content, "t": m.created.isoformat()} for m in msgs]
-    return jsonify({"items": items})
-
-@app.post("/api/chat/<cid>")
-def chat_sync(cid):
-    auth = request.headers.get("Authorization", "")
-    info = jwt_decode_token(auth)
-    if not info:
-        return jsonify({"error": "unauthorized"}), 401
-    body = request.json or {}
-    msg = body.get("message", "")
-    # Save user message
-    m_user = Message(conv_id=int(cid), sender="user", content=msg)
-    db.session.add(m_user)
-    db.session.commit()
-    # Generate reply (blocking)
-    payload = generate_reply(msg)
-    # If generate_reply returns dict, we may want stringified content
-    reply_text = payload if isinstance(payload, str) else str(payload)
-    m_ai = Message(conv_id=int(cid), sender="ai", content=reply_text)
-    db.session.add(m_ai)
-    db.session.commit()
-    # Return structured payload if available
-    if isinstance(payload, dict):
-        return jsonify(payload)
-    else:
-        # default structured
-        return jsonify({
-            "prediction": reply_text,
-            "tarot_card": "The Moon",
-            "lucky_numbers": [7, 15, 23, 42],
-            "luck_pct": 88,
-            "advice": "Giữ vững niềm tin",
-            "emoji": "🔮",
-            "color": "neon-blue"
-        })
-
-# --- Socket.IO streaming endpoint ---
-@socketio.on("connect")
-def connected():
-    emit("status", {"msg": "Connected"})
-
-@socketio.on("oracle_stream")
-def oracle_stream(data):
-    """
-    data: { prompt, temp, max, conv_id (optional), token: 'Bearer ...' optional }
-    We accept token either in data.auth_token or standard Authorization header.
-    """
-    # auth
-    bearer = data.get("auth_token") or request.headers.get("Authorization", "")
-    info = jwt_decode_token(bearer)
-    if not info:
-        emit("error", {"error": "unauthorized"})
-        return
-
-    prompt = data.get("prompt", "")
-    temp = float(data.get("temp", 0.7))
-    max_tokens = int(data.get("max", 150))
-    conv_id = data.get("conv_id")
-
-    # Save user message to DB (optional)
-    try:
-        if conv_id:
-            m_user = Message(conv_id=int(conv_id), sender="user", content=prompt)
-            db.session.add(m_user)
-            db.session.commit()
-    except Exception:
-        pass
-
-    # stream tokens from model_manager.stream_generate_reply (generator)
-    try:
-        gen = stream_generate_reply(prompt, temp, max_tokens)
-    except Exception as e:
-        # If stream_generate_reply raises, try generate_reply fallback
-        final = generate_reply(prompt, temp, max_tokens)
-        # emit final result as single payload
-        emit("oracle_end", {"payload": final})
-        return
-
-    buffer = ""
-    for chunk in gen:
-        # chunk may be str tokens, or final dict
-        if isinstance(chunk, str):
-            buffer += chunk
-            emit("oracle_token", {"t": chunk})
-        elif isinstance(chunk, dict):
-            # final structured payload
-            final_payload = chunk
-            # Save AI message into DB if conv_id present
-            try:
-                if conv_id:
-                    m_ai = Message(conv_id=int(conv_id), sender="ai", content=str(final_payload))
-                    db.session.add(m_ai)
-                    db.session.commit()
-            except Exception:
-                pass
-            emit("oracle_end", {"payload": final_payload})
-        else:
-            # unknown type -> stringify and send
-            s = str(chunk)
-            buffer += s
-            emit("oracle_token", {"t": s})
-        # cooperative sleep (eventlet)
-        socketio.sleep(0)
-    # If generator completed without dict final, emit end with text
-    if not isinstance(chunk, dict):
-        emit("oracle_end", {"payload": {"prediction": buffer}})
-
-# Serve static files for default avatar or others (optional)
-@app.route("/static/avatar/<path:filename>")
-def static_avatar(filename):
-    return send_from_directory(app.config["UPLOAD_FOLDER"], filename)
-
-# --- Run app ---
-if __name__ == "__main__":
-    port = int(os.environ.get("PORT", os.environ.get("RENDER_PORT", 5000)))
-    # Use eventlet server
-    socketio.run(app, host="0.0.0.0", port=port)
