@@ -359,7 +359,8 @@ def handle_message(data):
         emit('error', {'message': str(e)})
 
 if __name__ == '__main__':
+    port = int(os.environ.get('PORT', 5000))
     with app.app_context():
         db.create_all()
         os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
-    socketio.run(app, host='0.0.0.0', port=5000, debug=True)
+    socketio.run(app, host='0.0.0.0', port=port, debug=False)
