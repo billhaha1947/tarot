@@ -226,6 +226,19 @@
             animation: slideInUp 0.5s ease-out;
         }
         
+        /* Mobile Safe Area */
+        .pb-safe {
+            padding-bottom: env(safe-area-inset-bottom, 0.75rem);
+        }
+        
+        /* Line Clamp */
+        .line-clamp-2 {
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+        
         /* Loading Spinner */
         .spinner {
             border: 3px solid rgba(255, 255, 255, 0.1);
