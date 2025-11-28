@@ -18,7 +18,7 @@ app.config['UPLOAD_FOLDER'] = 'static/avatar'
 app.config['MAX_CONTENT_LENGTH'] = 5 * 1024 * 1024  # 5MB max
 
 db.init_app(app)
-socketio = SocketIO(app, cors_allowed_origins="*", async_mode='threading')
+socketio = SocketIO(app, cors_allowed_origins="*", async_mode='eventlet')
 
 model_manager = ModelManager()
 
@@ -273,11 +273,11 @@ def update_settings(current_user):
 
 @socketio.on('connect')
 def handle_connect():
-    print('Client connected')
+    print('✓ Client connected')
 
 @socketio.on('disconnect')
 def handle_disconnect():
-    print('Client disconnected')
+    print('✗ Client disconnected')
 
 @socketio.on('send_message')
 def handle_message(data):
@@ -359,8 +359,26 @@ def handle_message(data):
         emit('error', {'message': str(e)})
 
 if __name__ == '__main__':
+    # Get port from environment (Render uses PORT env var)
     port = int(os.environ.get('PORT', 5000))
+    
+    # Initialize database and folders
     with app.app_context():
         db.create_all()
         os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
-    socketio.run(app, host='0.0.0.0', port=port, debug=False)
+        print("✓ Database initialized")
+        print("✓ Upload folder created")
+    
+    # Run with eventlet for production
+    print(f"🔮 Starting Tarot Oracle on port {port}...")
+    print(f"🌐 Server: http://0.0.0.0:{port}")
+    print(f"💫 Environment: {'Production' if not app.debug else 'Development'}")
+    
+    socketio.run(
+        app, 
+        host='0.0.0.0', 
+        port=port,
+        debug=False,           # Production mode
+        use_reloader=False,    # Disable auto-reload
+        log_output=True        # Show logs
+    )
