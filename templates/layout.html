@@ -1,40 +1,19 @@
-<!DOCTYPE html>
-<html lang="vi">
-<head>
-<meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>🔮 Tarot AI Oracle Hub</title>
-<script src="https://cdn.tailwindcss.com"></script>
+<!DOCTYPE html><html lang="vi"><head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{{title}}</title>
+<link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+<script src="/static/js/app.js"></script>
 <style>
-  body {
-    background:#0a0f16;
-    font-family:system-ui, sans-serif;
-  }
-  .glass {
-    background: rgba(16, 25, 40, 0.6);
-    backdrop-filter: blur(12px);
-    border:1px solid rgba(80, 120, 255, 0.15);
-    box-shadow:0 0 25px rgba(80,120,255,0.25);
-  }
-  .neon {
-    text-shadow:0 0 10px #4c8bff,0 0 20px #1e60ff;
-  }
-</style>
-</head>
-<body class="text-gray-100">
-
-<nav class="glass fixed top-0 w-full px-5 py-3 flex justify-between items-center">
-  <h1 class="text-xl font-bold neon text-blue-400">Tarot AI Oracle Hub</h1>
-  <div class="flex gap-4">
-    <a href="/chat" class="hover:text-blue-400 transition">Chat</a>
-    <a href="/settings" class="hover:text-purple-400 transition">Cài đặt</a>
-    <a href="/login" class="hover:text-red-400 transition">Đăng nhập</a>
-  </div>
+body{background:#0a0f1f;color:white;font-family:Inter,sans-serif}
+.glass{backdrop-filter:blur(12px);background:rgba(15,15,40,0.45);border:1px solid rgba(138,43,226,0.3)}
+.bubble{padding:12px;border-radius:16px;margin:8px 0;max-width:75%;animation:.25s ease-out}
+.user{background:linear-gradient(90deg,#00f2ff,#0055ff);margin-left:auto;color:black;font-weight:500}
+.ai{background:linear-gradient(90deg,#8a2be2,#ff00d4)}
+.neon-glow{box-shadow:0 0 10px #ff00d4,0 0 5px #8a2be2}
+</style></head><body>
+<nav class="glass neon-glow p-3 flex justify-between">
+  <span>🔮 Tarot AI</span>
+  <img src="/static/avatar/{{avatar}}" class="w-8 h-8 rounded-full">
 </nav>
-
-<main class="pt-20 px-4">
-  {% block content %}{% endblock %}
-</main>
-
-</body>
-</html>
+<div class="p-4">{% block content %}{% endblock %}</div>
+</body></html>
