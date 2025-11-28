@@ -1,8 +1,5 @@
-Flask
-Flask-SQLAlchemy
-Flask-JWT-Extended
-Flask-Bcrypt
-Werkzeug
-GPT4All
+flask
+flask-sqlalchemy
 flask-socketio
-PyJWT
+pyjwt
+werkzeug
