@@ -1,60 +1,15 @@
 {% extends "layout.html" %}
 {% block content %}
+<div class="grid grid-cols-[260px,1fr] gap-4 p-4">
+<aside class="glass p-4 rounded-2xl">
+<button id="new-chat" class="w-full bg-purple-600 glow p-2 rounded-xl mb-3">+ Chat mới</button>
+<div id="convo-list"></div>
+</aside>
 
-<div class="max-w-3xl mx-auto space-y-5">
-  <div class="glass p-6 rounded-2xl">
-    <h2 class="text-2xl font-bold neon text-purple-400 mb-3">🔮 AI Oracle Chat</h2>
-    <p class="text-sm text-blue-300">Hệ thống đang chạy cục bộ 100%, không dùng API online.</p>
-  </div>
-
-  <div id="chatbox" class="glass h-[450px] overflow-y-auto p-5 rounded-2xl space-y-4"></div>
-
-  <div class="glass p-4 rounded-2xl flex gap-3">
-    <input id="chat_input" placeholder="Nhập câu hỏi..." 
-      class="bg-black/40 flex-1 p-3 rounded-xl border border-blue-500/20 focus:outline-none focus:ring-2 focus:ring-purple-500 transition"/>
-    <button onclick="sendChat()" 
-      class="px-5 py-3 rounded-xl glass hover:shadow-purple-500/40 transition">Gửi</button>
-  </div>
+<section class="glass p-4 rounded-2xl">
+<div id="chat-box" class="h-[60vh] overflow-y-auto space-y-3"></div>
+<div id="typing" class="text-green-400 italic hidden">Oracle đang gõ…</div>
+<input id="chat-input" placeholder="Nhập lời thỉnh cầu…" class="w-full mt-3 p-3 rounded bg-black border border-purple-400">
+</section>
 </div>
-
-<script>
-function addMsg(s, m){
-  const box = document.getElementById("chatbox");
-  const div = document.createElement("div");
-  div.className = s==="ai" ?
-    "text-left animate-fade-in-up" :
-    "text-right animate-fade-in-up";
-
-  const bubble = document.createElement("span");
-  bubble.className = s==="ai" ?
-  "inline-block px-4 py-2 rounded-xl glass text-blue-300 shadow-lg shadow-blue-500/20" :
-  "inline-block px-4 py-2 rounded-xl bg-purple-600/30 border border-purple-400/20 text-purple-200 shadow-lg shadow-purple-500/20";
-
-  bubble.textContent = m;
-  div.appendChild(bubble);
-  box.appendChild(div);
-  box.scrollTop = box.scrollHeight;
-}
-
-async function sendChat(){
-  const ip = document.getElementById("chat_input");
-  const m = ip.value.trim(); 
-  if(!m) return;
-  addMsg("user", m);
-  ip.value="";
-
-  const res = await fetch("/api/chat/1",{
-    method:"POST",
-    headers:{"Content-Type":"application/json"},
-    body:JSON.stringify({message:m})
-  });
-  const d = await res.json();
-  if(d && d.prediction) addMsg("ai", d.prediction);
-}
-
-window.onload = () => {
-  addMsg("ai","Chào bạn, mình là Oracle nội bộ. Hãy đặt câu hỏi Tarot 🔥🔮");
-}
-</script>
-
 {% endblock %}
