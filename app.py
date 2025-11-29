@@ -10,10 +10,6 @@ from functools import wraps
 from database import db, User, Chat, Message
 from model_manager import ModelManager
 
-# Import eventlet và monkey patch TRƯỚC khi import bất cứ thứ gì khác
-import eventlet
-eventlet.monkey_patch()
-
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'tarot-oracle-secret-key-2024'
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///tarot_oracle.db'
@@ -237,7 +233,16 @@ def get_chat(current_user, chat_id):
             'id': msg.id,
             'role': msg.role,
             'content': msg.content,
-            'oracle_data': json.loads(msg.oracle_data) if msg.oracle_data else None,
+            'oracle_data': json.loads(msg.oracle_data) if msg.oracle_data else from flask import Flask, render_template, request, jsonify, session
+from flask_socketio import SocketIO, emit
+from werkzeug.security import generate_password_hash, check_password_hash
+from werkzeug.utils import secure_filename
+import jwt
+import datetime
+import os
+import json
+from functools import wraps
+from database import db,,
             'created_at': msg.created_at.isoformat()
         } for msg in messages]
     }), 200
