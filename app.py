@@ -15,11 +15,10 @@ app.config['SECRET_KEY'] = 'tarot-oracle-secret-key-2024'
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///tarot_oracle.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['UPLOAD_FOLDER'] = 'static/avatar'
-app.config['MAX_CONTENT_LENGTH'] = 5 * 1024 * 1024  # 5MB max
+app.config['MAX_CONTENT_LENGTH'] = 5 * 1024 * 1024
 
 db.init_app(app)
-socketio = SocketIO(app, cors_allowed_origins="*", async_mode='threading')
-
+socketio = SocketIO(app, cors_allowed_origins="*", async_mode='eventlet')
 model_manager = ModelManager()
 
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp'}
@@ -51,12 +50,7 @@ def index():
 
 @app.route('/health')
 def health():
-    """Health check endpoint"""
-    return jsonify({
-        'status': 'ok',
-        'message': 'Tarot Oracle is running',
-        'timestamp': datetime.datetime.utcnow().isoformat()
-    }), 200
+    return jsonify({'status': 'ok', 'message': 'Tarot Oracle is running'}), 200
 
 @app.route('/register')
 def register_page():
@@ -233,16 +227,7 @@ def get_chat(current_user, chat_id):
             'id': msg.id,
             'role': msg.role,
             'content': msg.content,
-            'oracle_data': json.loads(msg.oracle_data) if msg.oracle_data else from flask import Flask, render_template, request, jsonify, session
-from flask_socketio import SocketIO, emit
-from werkzeug.security import generate_password_hash, check_password_hash
-from werkzeug.utils import secure_filename
-import jwt
-import datetime
-import os
-import json
-from functools import wraps
-from database import db,,
+            'oracle_data': json.loads(msg.oracle_data) if msg.oracle_data else None,
             'created_at': msg.created_at.isoformat()
         } for msg in messages]
     }), 200
@@ -327,7 +312,6 @@ def handle_message(data):
             emit('error', {'message': 'Chat not found'})
             return
         
-        # Lưu tin nhắn người dùng
         user_message = Message(chat_id=chat_id, role='user', content=prompt)
         db.session.add(user_message)
         db.session.commit()
@@ -338,7 +322,6 @@ def handle_message(data):
             'created_at': user_message.created_at.isoformat()
         })
         
-        # Tạo phản hồi AI
         full_response = ""
         oracle_data = None
         
@@ -349,7 +332,6 @@ def handle_message(data):
             elif chunk['type'] == 'oracle':
                 oracle_data = chunk['data']
         
-        # Lưu tin nhắn AI
         ai_message = Message(
             chat_id=chat_id,
             role='assistant',
@@ -358,7 +340,6 @@ def handle_message(data):
         )
         db.session.add(ai_message)
         
-        # Cập nhật tiêu đề chat nếu là tin nhắn đầu tiên
         if Message.query.filter_by(chat_id=chat_id).count() <= 2:
             chat.title = prompt[:50] + ('...' if len(prompt) > 50 else '')
         
@@ -377,7 +358,13 @@ def handle_message(data):
         emit('error', {'message': str(e)})
 
 if __name__ == '__main__':
+    port = int(os.environ.get('PORT', 5000))
+    
     with app.app_context():
         db.create_all()
         os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
-    socketio.run(app, host='0.0.0.0', port=5000, debug=True)
+        print("✓ Database initialized")
+        print("✓ Upload folder created")
+    
+    print(f"🔮 Starting Tarot Oracle on port {port}...")
+    socketio.run(app, host='0.0.0.0', port=port, debug=False)
