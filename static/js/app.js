@@ -56,15 +56,26 @@ document.addEventListener('click', (e) => {
 // Initialize Socket.IO
 function initSocket() {
     socket = io({
-        transports: ['websocket', 'polling']
+        transports: ['websocket', 'polling'],
+        reconnection: true,
+        reconnectionDelay: 1000,
+        reconnectionAttempts: 5,
+        timeout: 20000
     });
     
     socket.on('connect', () => {
         console.log('✓ Socket connected');
+        showToast('Đã kết nối với server', 'success');
     });
     
-    socket.on('disconnect', () => {
-        console.log('✗ Socket disconnected');
+    socket.on('disconnect', (reason) => {
+        console.log('✗ Socket disconnected:', reason);
+        showToast('Mất kết nối với server', 'warning');
+    });
+    
+    socket.on('connect_error', (error) => {
+        console.error('Socket connection error:', error);
+        showToast('Lỗi kết nối: ' + error.message, 'error');
     });
     
     socket.on('user_message', (data) => {
@@ -88,21 +99,47 @@ function initSocket() {
 // Load user info
 async function loadUserInfo() {
     try {
+        console.log('Loading user info...');
         const user = await apiRequest('/api/user');
+        console.log('User loaded:', user);
         username.textContent = user.username;
         userAvatar.src = user.avatar;
     } catch (error) {
-        showToast('Không thể tải thông tin người dùng', 'error');
+        console.error('Load user error:', error);
+        showToast('Không thể tải thông tin người dùng: ' + error.message, 'error');
+        
+        // If token invalid, logout
+        if (error.message.includes('Token') || error.message.includes('401')) {
+            setTimeout(() => {
+                removeToken();
+                removeUser();
+                window.location.href = '/';
+            }, 2000);
+        }
     }
 }
 
 // Load chats
 async function loadChats() {
     try {
+        console.log('Loading chats...');
         chats = await apiRequest('/api/chats');
+        console.log('Chats loaded:', chats.length);
         renderChatList();
     } catch (error) {
-        showToast('Không thể tải danh sách chat', 'error');
+        console.error('Load chats error:', error);
+        showToast('Không thể tải danh sách chat: ' + error.message, 'error');
+        
+        // Show empty state
+        chatList.innerHTML = `
+            <div class="text-center text-gray-500 py-8">
+                <p>⚠️ Lỗi tải dữ liệu</p>
+                <p class="text-sm mt-2">${error.message}</p>
+                <button onclick="loadChats()" class="btn-secondary px-4 py-2 rounded-lg text-sm mt-4">
+                    🔄 Thử lại
+                </button>
+            </div>
+        `;
     }
 }
 
@@ -529,3 +566,9 @@ document.head.appendChild(style);
 loadUserInfo();
 loadChats();
 initSocket();
+
+// Test connection
+fetch('/health')
+    .then(r => r.json())
+    .then(data => console.log('✓ Server health:', data))
+    .catch(e => console.error('✗ Server health check failed:', e));
