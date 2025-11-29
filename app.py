@@ -10,6 +10,10 @@ from functools import wraps
 from database import db, User, Chat, Message
 from model_manager import ModelManager
 
+# Import eventlet và monkey patch TRƯỚC khi import bất cứ thứ gì khác
+import eventlet
+eventlet.monkey_patch()
+
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'tarot-oracle-secret-key-2024'
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///tarot_oracle.db'
