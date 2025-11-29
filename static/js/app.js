@@ -100,16 +100,18 @@ function initSocket() {
 async function loadUserInfo() {
     try {
         console.log('Loading user info...');
+        console.log('Token:', getToken());
         const user = await apiRequest('/api/user');
         console.log('User loaded:', user);
         username.textContent = user.username;
         userAvatar.src = user.avatar;
     } catch (error) {
         console.error('Load user error:', error);
-        showToast('Không thể tải thông tin người dùng: ' + error.message, 'error');
+        showToast('Không thể tải thông tin: ' + error.message, 'error');
         
-        // If token invalid, logout
-        if (error.message.includes('Token') || error.message.includes('401')) {
+        // If 401, logout
+        if (error.message.includes('401') || error.message.includes('Token')) {
+            console.log('Token invalid, redirecting to login...');
             setTimeout(() => {
                 removeToken();
                 removeUser();
@@ -180,18 +182,28 @@ function renderChatList() {
 // Create new chat
 async function createNewChat() {
     try {
+        console.log('Creating new chat...');
         const chat = await apiRequest('/api/chats', {
             method: 'POST',
             body: JSON.stringify({ title: 'Cuộc trò chuyện mới' })
         });
         
+        console.log('Chat created:', chat);
         chats.unshift(chat);
         renderChatList();
         loadChat(chat.id);
         showToast('Đã tạo cuộc trò chuyện mới', 'success');
         
+        // Close sidebar on mobile
+        if (window.innerWidth < 1024) {
+            sidebar.classList.add('-translate-x-full');
+            menuIcon.textContent = '☰';
+            sidebarOpen = false;
+        }
+        
     } catch (error) {
-        showToast('Không thể tạo chat mới', 'error');
+        console.error('Create chat error:', error);
+        showToast('Không thể tạo chat: ' + error.message, 'error');
     }
 }
 
